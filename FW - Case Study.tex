@@ -1,0 +1,141 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{tikz}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\geometry{margin=2.5cm}
+\setstretch{1.2}
+
+\definecolor{lightblue}{RGB}{218,232,252}
+\definecolor{lightgreen}{RGB}{213,232,212}
+\definecolor{lightorange}{RGB}{255,230,204}
+\definecolor{darkblue}{RGB}{108,142,191}
+
+\title{\textbf{Arquitetura Simplificada do AlgoSec — Visão Técnica Detalhada}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Visão Geral}
+Este documento descreve a arquitetura simplificada do \textbf{AlgoSec} em um ambiente de implantação mínima funcional.  
+O objetivo é detalhar o funcionamento interno dos principais componentes (\textit{Central Manager}, \textit{Firewall Analyzer (AFA)} e \textit{FireFlow}), bem como os fluxos de comunicação, protocolos, requisitos de rede e especificações de hardware para um ambiente enxuto, porém operacional.
+\usetikzlibrary{shapes, arrows, positioning}
+
+\section*{Arquitetura}
+
+
+\section*{Componentes Internos e Interações}
+
+\subsection*{1. AlgoSec Central Manager}
+\begin{itemize}[leftmargin=1.5cm]
+    \item Hospeda a \textbf{GUI}, o agendador interno de tarefas, o banco de dados e o gerenciamento de usuários.
+    \item Administra os módulos \textit{AFA} e \textit{FireFlow}.
+    \item Gerencia integrações externas: AD, SMTP e APIs de ITSM (ex: ServiceNow).
+    \item Serviços internos:
+    \begin{itemize}
+        \item PostgreSQL (banco de dados backend)
+        \item Interface Web baseada em Tomcat (HTTPS)
+        \item Daemons do AFA e FireFlow para orquestração
+    \end{itemize}
+\end{itemize}
+
+\subsection*{2. AlgoSec Firewall Analyzer (AFA)}
+\begin{itemize}[leftmargin=1.5cm]
+    \item Realiza:
+    \begin{itemize}
+        \item Análise de configurações (ACLs, NAT, objetos)
+        \item Identificação de regras não utilizadas
+        \item Análise de risco com base em base de vulnerabilidades
+        \item Simulação de conectividade (\textit{“Por que está bloqueado?”})
+    \end{itemize}
+    \item Compatível com mais de 100 fabricantes (Check Point, Cisco ASA, FortiGate, etc.)
+    \item Comunicação:
+    \begin{itemize}
+        \item SSH (TCP 22) para dispositivos CLI
+        \item HTTPS/REST API (TCP 443) para firewalls modernos
+        \item Coleta de configurações (\textit{pull}) sob demanda ou agendada
+    \end{itemize}
+\end{itemize}
+
+\subsection*{3.AlgoSec FireFlow}
+\begin{itemize}[leftmargin=1.5cm]
+    \item Módulo de \textbf{automação de mudanças e ticketing}.
+    \item Aceita solicitações de mudança via GUI ou API.
+    \item Executa automaticamente:
+    \begin{itemize}
+        \item Análise de risco da solicitação de regra
+        \item Roteamento de aprovação com base em políticas
+        \item Simulação pré-aplicação via AFA
+    \end{itemize}
+    \item Fluxo resumido:
+    \[
+    \text{Usuário} \rightarrow \text{FireFlow} \rightarrow \text{AFA} \rightarrow \text{FireFlow} \rightarrow \text{Aprovação/Implementação}
+    \]
+\end{itemize}
+
+\section*{Requisitos de Segurança e Acesso}
+\begin{itemize}[leftmargin=1.5cm]
+    \item Acesso do AlgoSec aos Firewalls deve ser \textbf{iniciado pelo AFA}.
+    \item Autenticação via:
+    \begin{itemize}
+        \item SSH com chave pública (recomendado)
+        \item Tokens de API (para Palo Alto, Fortinet, etc.)
+    \end{itemize}
+    \item Integração opcional com Active Directory (LDAP/LDAPS) para RBAC.
+    \item SMTP para envio de notificações.
+    \item IP estático e registro DNS para o appliance AlgoSec.
+    \item Operação \textbf{fora de banda} (não interfere no tráfego).
+\end{itemize}
+
+\section*{Requisitos Mínimos de Infraestrutura}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{0.95\textwidth}{|l|c|c|c|X|}
+\hline
+\textbf{Componente} & \textbf{vCPU} & \textbf{RAM} & \textbf{Disco} & \textbf{Observações} \\
+\hline
+Central Manager VM & 8 & 32 GB & 500 GB & Pode hospedar AFA + FireFlow combinados \\
+\hline
+Acesso de Rede & - & - & - & SSH (TCP 22), HTTPS (443), AD (389/636) \\
+\hline
+Plataforma OS & - & - & - & Appliance endurecido (OVA fornecido pela AlgoSec) \\
+\hline
+\end{tabularx}
+\end{center}
+\section*{ Etapas Mínimas de Configuração (Minimal Setup Steps)}
+\begin{enumerate}[leftmargin=1.5cm]
+    \item \textbf{Implantação do Appliance:} implantar a OVA ou ISO no ambiente VMware, KVM ou Hyper-V.
+    \item \textbf{Configuração de Rede:} definir IP estático, DNS e NTP.
+    \item \textbf{Adição de Dispositivos:} registrar IPs e credenciais dos firewalls.
+    \item \textbf{Importação Inicial de Políticas:} executar o primeiro parsing de configuração e validar.
+    \item \textbf{Criação de Solicitação de Regra de Teste:} usar o FireFlow para simular e analisar uma mudança.
+    \item \textbf{Agendar Análises Periódicas:} configurar auditorias e otimizações recorrentes.
+\end{enumerate}
+
+\section*{Evolução da Arquitetura}
+\begin{itemize}[leftmargin=1.5cm]
+    \item Adicionar o módulo \textbf{BusinessFlow} para visualizações centradas em aplicações.
+    \item Separar o \textbf{Analyzer} e o \textbf{FireFlow} em VMs distintas para melhor desempenho.
+    \item Implementar \textbf{alta disponibilidade (HA)} e clusters de failover.
+    \item Integrar com plataformas de \textbf{ITSM} (ServiceNow) e \textbf{SIEM} (Splunk).
+\end{itemize}
+
+\section*{Benefícios da Arquitetura Mínima}
+Mesmo em sua forma simplificada, essa arquitetura entrega:
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{Visibilidade total} sobre regras e riscos.
+    \item \textbf{Automação} de mudanças de política de segurança.
+    \item \textbf{Relatórios centralizados} de conformidade e auditoria.
+\end{itemize}
+\section*{ Considerações Finais}
+Esta topologia representa o modelo mínimo de implantação para um ambiente \textbf{funcional, seguro e enxuto}.  
+Ela fornece base para justificar investimentos, estimar recursos e validar uma prova de conceito realista da suíte \textbf{AlgoSec}.
+
+\end{document}
