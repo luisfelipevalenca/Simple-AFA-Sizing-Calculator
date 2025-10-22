@@ -1,0 +1,65 @@
+
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usepackage[edges]{forest} % precisa estar no preâmbulo
+
+\begin{document}
+
+\usetikzlibrary{shapes, arrows, positioning}
+\begin{tikzpicture}[
+    node distance=1.5cm and 2.5cm,
+    box/.style={draw, thick, rounded corners, align=center, minimum width=4cm, minimum height=1cm},
+    line/.style={-latex, thick},
+]
+\node[box, fill=blue!10] (infra) {SMTP / DNS / \\ NTP / AD/LDAP};
+\node[box, fill=blue!15, below=of infra] (afa) {AlgoSec AFA \\ \small (Mgmt Subnet: 10.1)};
+\node[box, fill=orange!15, below=of afa] (fw) {Perímetro do Firewall \\ \small (e.g., Palo Alto)};
+\node[box, fill=green!15, below left=of fw] (app1) {App Server 1 \\ \small (Finanças) \\ Subnet: 10.10};
+\node[box, fill=green!15, below right=of fw] (app2) {App Server 2 \\ \small (RH) \\ Subnet: 10.20};
+\draw[line] (infra) -- node[right]{\small (Gerenciador de Tráfego)} (afa);
+\draw[line] (afa) -- node[right]{\small (SSH/API Pull | Syslog/SNMP)} (fw);
+\draw[line] (fw.south west) -- (app1.north);
+\draw[line] (fw.south east) -- (app2.north);
+\end{tikzpicture}
+
+
+\usetikzlibrary{shapes, arrows, positioning}
+
+
+\begin{tikzpicture}[
+    node distance=1.5cm and 2.5cm,
+    every node/.style={font=\sffamily},
+    box/.style={draw, thick, rounded corners, align=center, minimum width=4cm, minimum height=1cm},
+    line/.style={-latex, thick},
+]
+
+% Top Layer: Infra Services
+\node[box, fill=blue!10] (infra) {SMTP / DNS / \\ NTP / AD/LDAP};
+
+% AlgoSec AFA
+\node[box, fill=blue!15, below=of infra] (afa) {AlgoSec AFA \\ \small (Mgmt Subnet: 10.1)};
+
+% Firewall
+\node[box, fill=orange!15, below=of afa] (fw) {Perimeter Firewall \\ \small (e.g., Palo Alto)};
+
+% Application Servers
+\node[box, fill=green!15, below left=of fw, xshift=-0.3cm] (app1) {App Server 1 \\ \small (Finance App) \\ Subnet: 10.10};
+\node[box, fill=green!15, below right=of fw, xshift=0.3cm] (app2) {App Server 2 \\ \small (HR Web Server) \\ Subnet: 10.20};
+
+% Connections
+\draw[line] (infra) -- node[right]{\small (Mgmt Traffic)} (afa);
+\draw[line] (afa) -- node[right]{\small (SSH/API Pull \\ Syslog/SNMP)} (fw);
+\draw[line] (fw.south west) -- (app1.north);
+\draw[line] (fw.south east) -- (app2.north);
+
+% Optional dashed horizontal connections
+\draw[dashed, thick] (app1.east) -- (app2.west);
+
+\end{tikzpicture}
+
+
+\end{document}
