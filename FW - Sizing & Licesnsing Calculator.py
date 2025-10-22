@@ -5,7 +5,7 @@ def calculate_resources(num_firewalls, avg_rules, avg_objects, delta_change_rate
     total_objects = num_firewalls * avg_objects
     delta_devices = int(num_firewalls * delta_change_rate)
     
-    print("📊 AFA Deployment Sizing Summary")
+    print("AFA Deployment Sizing Summary")
     print("-" * 40)
     print(f"Total Firewalls Managed: {num_firewalls}")
     print(f"Total Rulebase Size: {total_rules}")
